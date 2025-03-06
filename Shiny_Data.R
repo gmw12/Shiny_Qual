@@ -115,6 +115,10 @@ protein_plot <- function(session, input, output){
   
   df <- df_peptide
   
+  if (input$protein_gene != ""){
+    df <- df[grep(input$protein_gene, df$PG.Genes),]
+  }
+  
   if (input$protein_accession != ""){
     df <- df[grep(input$protein_accession, df$PG.ProteinNames),]
   }
@@ -168,4 +172,56 @@ protein_plot <- function(session, input, output){
   
   
   cat(file = stderr(), "Function protein_plot...end", "\n\n")
+}
+
+#---------------------------------------------------------------------
+filter_protein_table <- function(session, input, output){
+  cat(file = stderr(), "Function filter protein table...", "\n")
+  
+  df <- df_protein
+  
+  if (input$protein_data_gene != ""){
+    df <- df[grep(input$protein_data_gene, df$PG.Genes),]
+  }
+  
+  if (input$protein_data_accession != ""){
+    df <- df[grep(input$protein_data_accession, df$PG.ProteinNames),]
+  }
+  
+  if (input$protein_data_description != ""){
+    df <- df[grep(input$protein_data_description, df$PG.ProteinDescriptions),]
+  }
+  
+  if (input$protein_data_sequence != ""){
+    df <- df[grep(input$protein_data_sequence, df$EG.ModifiedSequence),]
+  }
+  
+  cat(file = stderr(), "Function filter protein table...", "\n\n\n")
+  return(df)
+}
+
+#---------------------------------------------------------------------
+filter_peptide_table <- function(session, input, output){
+  cat(file = stderr(), "Function filter peptide table...", "\n")
+  
+  df <- df_peptide
+  
+  if (input$peptide_data_gene != ""){
+    df <- df[grep(input$peptide_data_gene, df$PG.Genes),]
+  }
+  
+  if (input$peptide_data_accession != ""){
+    df <- df[grep(input$peptide_data_accession, df$PG.ProteinNames),]
+  }
+  
+  if (input$peptide_data_description != ""){
+    df <- df[grep(input$peptide_data_description, df$PG.ProteinDescriptions),]
+  }
+  
+  if (input$peptide_data_sequence != ""){
+    df <- df[grep(input$peptide_data_sequence, df$EG.ModifiedSequence),]
+  }
+  
+  cat(file = stderr(), "Function filter peptide table...", "\n\n\n")
+  return(df)
 }

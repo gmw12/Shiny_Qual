@@ -35,12 +35,18 @@ create_data_table <- function(session, input, output, type){
   )
   
   if (type == "peptide"){
-    peptide_table_DT <-  DT::datatable(df_peptide, rownames = FALSE, extensions = "FixedColumns", options = options)
+    
+    df <- filter_peptide_table(session, input, output)
+    
+    peptide_table_DT <-  DT::datatable(df, rownames = FALSE, extensions = "FixedColumns", options = options)
     output$peptide_table <- DT::renderDataTable(peptide_table_DT) 
   }
   
   if (type == "protein"){
-    protein_table_DT <-  DT::datatable(df_protein, rownames = FALSE, extensions = "FixedColumns", options = options)
+    
+    df <- filter_protein_table(session, input, output)
+    
+    protein_table_DT <-  DT::datatable(df, rownames = FALSE, extensions = "FixedColumns", options = options)
     output$protein_table <- DT::renderDataTable(protein_table_DT) 
   }
   

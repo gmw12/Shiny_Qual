@@ -95,7 +95,7 @@ shinyServer(function(session, input, output) {
 
   #------------------------------------------------------------------------------------------------------  
   observeEvent(input$prepare_data, {
-    showModal(modalDialog("Saving excel...", footer = NULL))
+    showModal(modalDialog("Preparing Data...", footer = NULL))
     cat(file = stderr(), "prepare data clicked...", "\n")
     
     precursor_to_peptide() 
@@ -110,6 +110,24 @@ shinyServer(function(session, input, output) {
     
     removeModal()
     cat(file = stderr(), "prepare data clicked...end", "\n\n\n")
+  })
+  
+  #------------------------------------------------------------------------------------------------------  
+  observeEvent(input$peptide_data_table_apply, {
+    cat(file = stderr(), "peptide data table apply clicked...", "\n")
+    
+    create_data_table(session, input, output, "peptide")
+    
+    cat(file = stderr(), "peptide data table apply clicked...end", "\n")
+  })
+  
+  #------------------------------------------------------------------------------------------------------  
+  observeEvent(input$protein_data_table_apply, {
+    cat(file = stderr(), "protein data table apply clicked...", "\n")
+    
+    create_data_table(session, input, output, "protein")
+    
+    cat(file = stderr(), "protein data table apply clicked...end", "\n")
   })
   
   #------------------------------------------------------------------------------------------------------  

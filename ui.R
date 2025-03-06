@@ -61,19 +61,59 @@ body <- dashboardBody(
                        tabBox(id="process_data", width = 12, height = 750,
                         
                         tabPanel("Peptide Data",
+                                 fluidRow(
+                                   column(width = 2,
+                                          textInput("peptide_data_gene", label = "Gene", value = "", width = 300)
+                                   ),
+                                   column(width = 2,
+                                          textInput("peptide_data_accession", label = "Protein Accession", value = "", width = 300)
+                                   ),
+                                   column(width = 2,
+                                          textInput("peptide_data_description", label = "Protein Description", value = "", width = 300)
+                                   ),
+                                   column(width = 2,
+                                          textInput("peptide_data_sequence", label = "Modified Sequence", value = "", width = 300)
+                                   ),
+                                   column(width = 2,
+                                          actionButton("peptide_data_table_apply", label = "Filter Table", width = 300,
+                                                       style = "color: #fff; background-color: #337ab7; border-color: #2e6da4")
+                                   )
+                                 ),
+                          fluidRow(                   
                             column(width =12, offset =0,
                               hr(),      
                               tags$head(tags$style("#peptide_table{color: blue; font-size: 12px;}")),
                               DT::dataTableOutput("peptide_table", width ='100%')
                            )
+                         )
                         ),                              
                               
                         tabPanel("Protein data",
-                           column(width =12, offset =0,
-                              hr(),
-                              tags$head(tags$style("#protein_table{color: blue; font-size: 12px;}")),
-                              DT::dataTableOutput("protein_table", width ='100%')
-                           )
+                              fluidRow(
+                                   column(width = 2,
+                                          textInput("protein_data_gene", label = "Gene", value = "", width = 300)
+                                   ),
+                                   column(width = 2,
+                                          textInput("protein_data_accession", label = "Protein Accession", value = "", width = 300)
+                                   ),
+                                   column(width = 2,
+                                          textInput("protein_data_description", label = "Protein Description", value = "", width = 300)
+                                   ),
+                                   column(width = 2,
+                                          textInput("protein_data_sequence", label = "Modified Sequence", value = "", width = 300)
+                                   ),
+                                   column(width = 2,
+                                          actionButton("protein_data_table_apply", label = "Filter Table", width = 300,
+                                                       style = "color: #fff; background-color: #337ab7; border-color: #2e6da4")
+                                   )
+                                 ),
+                            fluidRow(         
+                              column(width =12, offset =0,
+                                hr(),
+                                tags$head(tags$style("#protein_table{color: blue; font-size: 12px;}")),
+                                DT::dataTableOutput("protein_table", width ='100%')
+                              )
+                            )
                           ),
                         
                         tabPanel("Plot: Total Intensity",
@@ -96,16 +136,19 @@ body <- dashboardBody(
 
                         tabPanel("Plot: Protein",
                            fluidRow(
-                             column(width = 3,
+                             column(width = 2,
+                                    textInput("protein_gene", label = "Gene", value = "", width = 300)
+                             ),
+                             column(width = 2,
                                     textInput("protein_accession", label = "Protein Accession", value = "", width = 300)
                                     ),
-                             column(width = 3,
+                             column(width = 2,
                                     textInput("protein_description", label = "Protein Description", value = "", width = 300)
                                     ),
-                             column(width = 3,
+                             column(width = 2,
                                     textInput("peptide_sequence", label = "Modified Sequence", value = "", width = 300)
                                     ),
-                             column(width = 3,
+                             column(width = 2,
                                     actionButton("protein_plot_apply", label = "Show Plot", width = 300,
                                                  style = "color: #fff; background-color: #337ab7; border-color: #2e6da4")
                                     )
