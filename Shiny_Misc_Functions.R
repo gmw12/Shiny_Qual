@@ -106,3 +106,83 @@ simple_plate_name <- function(df) {
   cat(file = stderr(), "Function - simple_plate_name...end", "\n")
   return(df)
 }
+
+#----------------------------------------------------------
+Simple_fread <- function(file) {
+  data.table::fread(file = file, header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+} 
+
+#----------------------------------------------
+Simple_Excel <- function(df, sheetname, filename) {
+  cat(file=stderr(), stringr::str_c("Simple_Excel -> ", filename), "\n")
+  wb <- openxlsx::createWorkbook()
+  openxlsx::addWorksheet(wb, sheetname)
+  openxlsx::writeData(wb, sheet=1, df)  
+  openxlsx::saveWorkbook(wb, filename, overwrite = TRUE)
+}
+
+
+#----------------------------------------------------------------------------------------
+create_dir <- function(name){
+  cat(file = stderr(), "Function create_dir...", "\n")
+  if (fs::is_dir(name)) {
+    #added file delete, dir delete not working on customer shiny server
+    cat(file = stderr(), "dir exists, deleting...", "\n")
+    do.call(file.remove, list(list.files(name, full.names = TRUE)))
+    fs::dir_delete(name)
+    cat(file = stderr(), "dir deleted, re-creating...", "\n")
+    fs::dir_create(name, mode="u=rwx,go=rwx", recurse=TRUE)
+  }else{
+    cat(file = stderr(), stringr::str_c("dir does NOT exist, creating...", name), "\n")
+    fs::dir_create(name, mode="u=rwx,go=rwx", recurse=TRUE)
+  }
+  
+  if (fs::is_dir(name)) {
+    name <- stringr::str_replace_all(name, "/", "//")
+    name <- stringr::str_c(name, "//")
+    cat(file = stderr(), stringr::str_c(name, " confirmed created...", "\n"))
+  }else{
+    cat(file = stderr(), stringr::str_c(name, " NOT created...", "\n"))
+  }  
+  
+  cat(file = stderr(), "Function create_dir...end", "\n\n")
+  return(name)
+}
+#----------------------------------------------------------------------------------------
+create_dir_only <- function(name){
+  cat(file = stderr(), "Function create_dir_only...", "\n")
+  if (fs::is_dir(name)) {
+    #added file delete, dir delete not working on customer shiny server
+    cat(file = stderr(), "dir exists...", "\n")
+  }else{
+    dir_create(name)
+    name <- str_replace_all(name, "/", "//")
+    name <- str_c(name, "//")
+    cat(file = stderr(), str_c(name, " created...", "\n"))
+  }
+  
+  cat(file = stderr(), "Function create_dir_only...end", "\n\n")
+  return(name)
+}
+
+
+#----------------------------------------------------------------------------------------
+loadRData <- function(fileName){
+  #loads an RData file, and returns it
+  load(fileName)
+  get(ls()[ls() != "fileName"])
+}
+
+
+#----------------------------------------------------------------------------------------
+get_max_rowid <- function(table_name, params) {
+  cat(file = stderr(), "Function - get_max_rowid...", "\n")
+  
+  conn <- dbConnect(RSQLite::SQLite(), params$database_path) 
+  query <- stringr::str_c("SELECT max(RowId) FROM ", table_name) 
+  max_row <- dbGetQuery(conn, query)
+  RSQLite::dbDisconnect(conn)
+  
+  cat(file = stderr(), "Function - get_max_rowid...end", "\n")
+  return(max_row)
+}
