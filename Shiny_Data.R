@@ -2,25 +2,107 @@ cat(file = stderr(), "Shiny_Data.R", "\n")
 
 
 #---------------------------------------------------------------------
-precursor_to_peptide <- function(){
-  cat(file = stderr(), "Function precursor_to_peptide...", "\n")
+precursor_prepare <- function(df_psm){
+  cat(file = stderr(), "Function precursor_prepare...", "\n")
   
-  #remove duplicate rows from df_peptide
-  df_peptide <<- df_peptide[!duplicated(df_peptide),]
+  if (any(grepl("EG.PTMProbabilities", names(df_psm)))) {
+    ptm <- TRUE
+  }else {
+    ptm <- FALSE
+  }
   
-  cat(file = stderr(), "Function precursor_to_peptide...end", "\n")
+  #select columns and clean
+  if(ptm){
+    df_psm <- precursor_to_precursor_ptm_bg(df_psm)
+  }else{
+    df_psm <- precursor_to_precursor_bg(df_psm)
+    df_peptide <- rollup_sum(df_psm, "peptide")
+    df_protein <- rollup_sum(df_peptide, "protein")
+  }
+  
+  ptm <<- ptm
+  df_psm <<- df_psm
+  df_peptide <<- df_peptide
+  df_protein <<- df_protein
+  
+  cat(file = stderr(), "Function precursor_prepare...end", "\n")
+}
+
+#----------------------------------------------------------------------------------------
+precursor_to_precursor_bg <- function(df_psm){
+  cat(file = stderr(), "Function precursor_to_precursor_bg", "\n")
+  
+  df_colnames <- c("Accession", "Description", "Name", "Genes", "Organisms", "Sequence", "PrecursorId", "PeptidePosition")  
+  n_col <- length(df_colnames)
+  
+  df_info <- df_psm |> dplyr::select(contains('ProteinAccessions'), contains('ProteinDescriptions'), contains('ProteinNames'), contains('Genes'), contains('Organisms'),
+                            contains('ModifiedSequence'), contains('PrecursorId'), contains('PeptidePosition'))
+  df_data <- df_psm |> dplyr::select(contains("EG.TotalQuantity"))
+  
+  data_colnames <- colnames(df_data)
+  i=1
+  for (name in data_colnames){
+    first_space <- unlist(str_locate(name, " "))[1]
+    name <- substr(name, first_space+1, nchar(name))
+    positions <- unlist(str_locate_all(name, "_"))[2]
+    new_name <- substr(name, 1, positions-1)
+    data_colnames[i] <- str_c(new_name, "_TotalQuantity")
+    i <- i +1
+  }
+  
+  colnames(df_data) <- data_colnames
+  
+  df_data[df_data ==  "Filtered"] <- 0
+  df_data[is.na(df_data)] <- 0  
+  df_data <- as.data.frame(lapply(df_data, as.numeric))
+  
+  sample_number <- ncol(df_data) 
+  
+  colnames(df_info) <- df_colnames  
+
+  df_info$Description <- stringr::str_c(df_info$Description, ", org=", df_info$Organisms) 
+  df_info$Organisms <- NULL
+  
+  df_psm <- cbind(df_info, df_data)
+  sample_number <<- sample_number
+  
+  cat(file = stderr(), "precursor_to_precursor_bg... complete", "\n\n")
+  return(df_psm)
 }
 
 
+#--------------------------------------------------------------------------------
+rollup_sum <- function(df, rollup_type){
+  cat(file = stderr(), "function rollup_sum...", "\n")
+
+  
+  if (rollup_type == "peptide"){
+    cat(file = stderr(), "function rollup_type = peptide", "\n")
+    df_peptide <- df |> dplyr::select("Accession", "Description", "Name", "Genes", "Sequence", "PeptidePosition", contains("TotalQuantity"))
+    df_peptide <- tibble::add_column(df_peptide, "Precursors"=1, .after="PeptidePosition")
+    df_peptide <- df_peptide |> dplyr::group_by(Accession, Description, Name, Genes, Sequence, PeptidePosition) |> dplyr::summarise_all(list(sum))
+    df_peptide <- data.frame(dplyr::ungroup(df_peptide))
+    cat(file = stderr(), "function rollup_sum...end", "\n\n")
+    return(df_peptide)
+  }else if (rollup_type == "protein"){
+    cat(file = stderr(), "function rollup_type = protein", "\n")
+    df_protein <- df |> dplyr::select("Accession", "Description", "Name", "Genes", contains("TotalQuantity"))
+    df_protein <- tibble::add_column(df_protein, "Peptides"=1, .after="Genes")
+    df_protein <- df_protein |> dplyr::group_by(Accession, Description, Name, Genes) |> dplyr::summarise_all(list(sum))
+    df_protein <- data.frame(dplyr::ungroup(df_protein))
+    cat(file = stderr(), "function rollup_sum...end", "\n\n")
+    return(df_protein)
+  }
+}
 
 #---------------------------------------------------------------------
 adh_plot <- function(session, input, output){
   cat(file = stderr(), "Function adh_plot...", "\n")
   
-  df_adh <- df_peptide[grep("ADH1_YEAST|ADH2_YEAST", df_peptide$PG.ProteinNames),]
+  df_adh <- df_peptide[grep("P00330", df_peptide$Accession),]
   
   #using dplyr filter only columns that contain "PEP.Quantity" in the name
-  df_adh <- df_adh |> dplyr::select(contains("PEP.Quantity"))
+  df_adh <- df_adh |> dplyr::select(contains("TotalQuantity"))
   adh_colnames <- colnames(df_adh)
   
   i=1
@@ -33,6 +115,8 @@ adh_plot <- function(session, input, output){
   
   df <- data.frame(adh_colnames, colSums(df_adh, na.rm = TRUE))
   colnames(df) <- c("Sample", "Sum")
+  
+  df <- df[!grepl("ADH", df$Sample),]
   
   adh_cv <- 100 * round(sd(df$Sum)/mean(df$Sum), digits = 3)
   adh_title <- str_c("ADH, CV = ", adh_cv, "%")
@@ -66,7 +150,7 @@ intensity_plot <- function(session, input, output){
   df <- df_peptide
   
   #using dplyr filter only columns that contain "PEP.Quantity" in the name
-  df <- df |> dplyr::select(contains("PEP.Quantity"))
+  df <- df |> dplyr::select(contains("TotalQuantity"))
   df_colnames <- colnames(df)
 
   i=1
@@ -80,11 +164,10 @@ intensity_plot <- function(session, input, output){
   df_plot <- data.frame(df_colnames, colSums(df, na.rm = TRUE))
   colnames(df_plot) <- c("Sample", "Sum")
   
-  no_adh <- df_plot[!grepl("ADH", df_plot$Sample),]
+  df_plot <- df_plot[!grepl("ADH", df_plot$Sample),]
   
-  
-  plot_cv <- 100 * round(sd(no_adh$Sum)/mean(no_adh$Sum), digits = 3)
-  plot_title <- str_c("Total Intensity, CV (no ADH) = ", plot_cv, "%")
+  plot_cv <- 100 * round(sd(df_plot$Sum)/mean(df_plot$Sum), digits = 3)
+  plot_title <- str_c("Total Intensity, CV = ", plot_cv, "%")
   
   #using ggplot greate barplot of adh_sum, then show the plot
   create_intensity_plot <- reactive({
@@ -116,23 +199,27 @@ protein_plot <- function(session, input, output){
   df <- df_peptide
   
   if (input$protein_gene != ""){
-    df <- df[grep(input$protein_gene, df$PG.Genes),]
+    df <- df[grep(input$protein_gene, df$Genes),]
   }
   
   if (input$protein_accession != ""){
-    df <- df[grep(input$protein_accession, df$PG.ProteinNames),]
+    df <- df[grep(input$protein_accession, df$Accession),]
+  }
+  
+  if (input$protein_name != ""){
+    df <- df[grep(input$protein_accession, df$Name),]
   }
   
   if (input$protein_description != ""){
-    df <- df[grep(input$protein_description, df$PG.ProteinDescriptions),]
+    df <- df[grep(input$protein_description, df$Description),]
   }
   
   if (input$peptide_sequence != ""){
-    df <- df[grep(input$peptide_sequence, df$EG.ModifiedSequence),]
+    df <- df[grep(input$peptide_sequence, df$Sequence),]
   }
   
   #using dplyr filter only columns that contain "PEP.Quantity" in the name
-  df <- df |> dplyr::select(contains("PEP.Quantity"))
+  df <- df |> dplyr::select(contains("TotalQuantity"))
   df_colnames <- colnames(df)
   
   i=1
@@ -146,11 +233,10 @@ protein_plot <- function(session, input, output){
   df_plot <- data.frame(df_colnames, colSums(df, na.rm = TRUE))
   colnames(df_plot) <- c("Sample", "Sum")
   
-  no_adh <- df_plot[!grepl("ADH", df_plot$Sample),]
+  df_plot<- df_plot[!grepl("ADH", df_plot$Sample),]
   
-  
-  plot_cv <- 100 * round(sd(no_adh$Sum)/mean(no_adh$Sum), digits = 3)
-  plot_title <- str_c("Total Intensity, CV (no ADH) = ", plot_cv, "%")
+  plot_cv <- 100 * round(sd(df_plot$Sum)/mean(df_plot$Sum), digits = 3)
+  plot_title <- str_c("Total Intensity, CV  = ", plot_cv, "%")
   
   #using ggplot greate barplot of adh_sum, then show the plot
   create_intensity_plot <- reactive({
@@ -180,22 +266,22 @@ filter_protein_table <- function(session, input, output){
   
   df <- df_protein
   
-  if (input$protein_data_gene != ""){
-    df <- df[grep(input$protein_data_gene, df$PG.Genes),]
+  if (input$protein_data_accession != ""){
+    df <- df[grep(input$protein_data_accession, df$Accession),]
   }
   
-  if (input$protein_data_accession != ""){
-    df <- df[grep(input$protein_data_accession, df$PG.ProteinNames),]
+  if (input$protein_data_gene != ""){
+    df <- df[grep(input$protein_data_gene, df$Genes),]
+  }
+  
+  if (input$protein_data_name != ""){
+    df <- df[grep(input$protein_data_name, df$Name),]
   }
   
   if (input$protein_data_description != ""){
-    df <- df[grep(input$protein_data_description, df$PG.ProteinDescriptions),]
+    df <- df[grep(input$protein_data_description, df$PG.Description),]
   }
-  
-  if (input$protein_data_sequence != ""){
-    df <- df[grep(input$protein_data_sequence, df$EG.ModifiedSequence),]
-  }
-  
+
   cat(file = stderr(), "Function filter protein table...", "\n\n\n")
   return(df)
 }
@@ -206,20 +292,24 @@ filter_peptide_table <- function(session, input, output){
   
   df <- df_peptide
   
-  if (input$peptide_data_gene != ""){
-    df <- df[grep(input$peptide_data_gene, df$PG.Genes),]
+  if (input$peptide_data_accession != ""){
+    df <- df[grep(input$peptide_data_accession, df$Accession),]
   }
   
-  if (input$peptide_data_accession != ""){
-    df <- df[grep(input$peptide_data_accession, df$PG.ProteinNames),]
+  if (input$peptide_data_gene != ""){
+    df <- df[grep(input$peptide_data_gene, df$Genes),]
+  }
+  
+  if (input$peptide_data_name != ""){
+    df <- df[grep(input$peptide_data_name, df$Name),]
   }
   
   if (input$peptide_data_description != ""){
-    df <- df[grep(input$peptide_data_description, df$PG.ProteinDescriptions),]
+    df <- df[grep(input$peptide_data_description, df$Description),]
   }
   
   if (input$peptide_data_sequence != ""){
-    df <- df[grep(input$peptide_data_sequence, df$EG.ModifiedSequence),]
+    df <- df[grep(input$peptide_data_sequence, df$Sequence),]
   }
   
   cat(file = stderr(), "Function filter peptide table...", "\n\n\n")

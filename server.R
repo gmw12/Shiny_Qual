@@ -43,62 +43,46 @@ shinyServer(function(session, input, output) {
   
   #------------------------------------------------------------------------------------------------------  
   #Load data file
-  observeEvent(input$sfb_peptide_file, {
+  observeEvent(input$sfb_psm_file, {
     
-    cat(file = stderr(), "sfb_peptide_file button clicked...", "\n")
+    cat(file = stderr(), "sfb_psm_file button clicked...", "\n")
     
-    if (is.list(input$sfb_peptide_file)) {
-      showModal(modalDialog("Loading peptide data...", footer = NULL))
+    if (is.list(input$sfb_psm_file)) {
+      showModal(modalDialog("Loading psm data...", footer = NULL))
       
-      peptide_sfb <- parseFilePaths(volumes, input$sfb_peptide_file)
-      peptide_path <- str_extract(peptide_sfb$datapath, "^/.*/")
-      peptide_filename <- peptide_sfb$datapath
+      psm_sfb <- parseFilePaths(volumes, input$sfb_psm_file)
+      psm_path <- str_extract(psm_sfb$datapath, "^/.*/")
+      psm_filename <- psm_sfb$datapath
       
-      peptide_path <<- peptide_path
-      peptide_filename <<- peptide_filename
+      psm_path <<- psm_path
+      psm_filename <<- psm_filename
       
-      df_peptide <<- Simple_fread(peptide_filename)
+      df_psm <- data.table::fread(file = psm_filename, header = TRUE, stringsAsFactors = FALSE, sep = "\t")
       
-      output$peptide_file_name <- renderText({ stringr::str_c(basename(peptide_filename)) })
-        
+      output$psm_file_name <- renderText({ stringr::str_c(basename(psm_filename)) })
+      
+      precursor_prepare(df_psm)
+      
+      create_data_table(session, input, output, "peptide")
+      
+      create_data_table(session, input, output, "protein")
+      
+      intensity_plot(session, input, output)
+      
+      adh_plot(session, input, output)
+      
+      
       removeModal()
     }
     
-    cat(file = stderr(), "sfb_peptide_file button clicked...end", "\n\n\n")
+    cat(file = stderr(), "sfb_psm_file button clicked...end", "\n\n\n")
   }) 
 
-  #------------------------------------------------------------------------------------------------------  
-  #Load data file
-  observeEvent(input$sfb_protein_file, {
-    
-    cat(file = stderr(), "sfb_protein_file button clicked...", "\n")
-    
-    if (is.list(input$sfb_protein_file)) {
-      showModal(modalDialog("Loading protein data...", footer = NULL))
-      
-      protein_sfb <- parseFilePaths(volumes, input$sfb_protein_file)
-      protein_path <- str_extract(protein_sfb$datapath, "^/.*/")
-      protein_filename <- protein_sfb$datapath
-      
-      protein_path <<- protein_path
-      protein_filename <<- protein_filename
-      
-      df_protein <<- Simple_fread(protein_filename)
-      
-      output$protein_file_name <- renderText({ stringr::str_c(basename(protein_filename)) })
-      
-      removeModal()
-    }
-    
-    cat(file = stderr(), "sfb_protein_file button clicked...end", "\n\n\n")
-  }) 
 
   #------------------------------------------------------------------------------------------------------  
   observeEvent(input$prepare_data, {
     showModal(modalDialog("Preparing Data...", footer = NULL))
     cat(file = stderr(), "prepare data clicked...", "\n")
-    
-    precursor_to_peptide() 
     
     create_data_table(session, input, output, "peptide")
 
