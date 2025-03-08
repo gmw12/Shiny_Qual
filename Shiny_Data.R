@@ -13,6 +13,8 @@ precursor_prepare <- function(df_psm){
   
   ptm <<- ptm
   
+  df_meta <<- data.frame("psm" = nrow(df_psm))
+  
   #select columns and clean
   if(ptm){
     df_psm <- precursor_to_precursor_ptm_bg(df_psm)
@@ -30,6 +32,12 @@ precursor_prepare <- function(df_psm){
     df_protein <- rollup_sum(df_peptide, "protein")
     df_protein <<- df_protein
   }
+  
+  df_meta$peptide <<- nrow(df_peptide)
+  if(exists("df_protein")) {df_meta$protein <<- nrow(df_protein)}
+  if(exists("df_peptide_ptm")) {df_meta$peptide_ptm <<- nrow(df_peptide_ptm)}
+  df_meta$sample_number <<- sample_number
+  
   
   cat(file = stderr(), "Function precursor_prepare...end", "\n")
 }
@@ -114,6 +122,8 @@ rollup_sum <- function(df, rollup_type){
     df_peptide$sum <- rowSums(df_peptide[,(ncol(df_peptide)-sample_number+1):ncol(df_peptide)], na.rm = TRUE)
     df_peptide <- df_peptide[order(df_peptide$sum, decreasing = TRUE),]
     df_peptide <- df_peptide |> dplyr::select(-sum)
+    df_peptide <- df_peptide[order(df_peptide$Local2, decreasing = TRUE),]
+    
     
     cat(file = stderr(), "function rollup_sum...end", "\n\n")
     return(df_peptide)
@@ -252,6 +262,7 @@ adh_plot <- function(session, input, output){
   df <- df[!grepl("ADH", df$Sample),]
   
   adh_cv <- 100 * round(sd(df$Sum)/mean(df$Sum), digits = 3)
+  df_meta$adh_cv <<- round(adh_cv, digits = 3)
   adh_title <- str_c("ADH, CV = ", adh_cv, "%")
   
   #using ggplot greate barplot of adh_sum, then show the plot
@@ -300,6 +311,7 @@ intensity_plot <- function(session, input, output){
   df_plot <- df_plot[!grepl("ADH", df_plot$Sample),]
   
   plot_cv <- 100 * round(sd(df_plot$Sum)/mean(df_plot$Sum), digits = 3)
+  df_meta$total_intensity_cv <<- round(plot_cv, digits = 3)
   plot_title <- str_c("Total Intensity, CV = ", plot_cv, "%")
   
   #using ggplot greate barplot of adh_sum, then show the plot
@@ -484,6 +496,7 @@ precursor_to_precursor_ptm_bg <- function(df){
   df_data <- as.data.frame(lapply(df_data, as.numeric))
   
   sample_number <- ncol(df_data) 
+  sample_number <<- sample_number
   
   colnames(df_info) <- df_colnames  
   
@@ -680,4 +693,19 @@ localize_summary <- function(df_phos, df_phos_prob){
   stopCluster(cl) 
   cat(file = stderr(), "Function localize_summary...end", "\n")
   return(parallel_result3) 
+}
+
+#----------------------------------------------------------------------------------------
+meta_data<- function(){
+  cat(file = stderr(), "Function meta_data...", "\n")
+  
+  #create empty dataframe called df_meta
+  df_meta <- data.frame("psm" = nrow(df_psm))
+  df_meta$peptide <- nrow(df_peptide)
+  if(exists("df_protein")) {df_meta$protein <- nrow(df_protein)}
+  if(exists("df_peptide_ptm")) {df_meta$peptide_ptm <- nrow(df_peptide_ptm)}
+  df_meta$sample_number <- sample_number
+
+  
+  cat(file = stderr(), "Function meta_data...end", "\n")
 }

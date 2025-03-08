@@ -71,7 +71,8 @@ shinyServer(function(session, input, output) {
       
       adh_plot(session, input, output)
       
-      
+      create_meta_table(session, input, output)
+        
       removeModal()
     }
     
@@ -91,6 +92,8 @@ shinyServer(function(session, input, output) {
     intensity_plot(session, input, output)
     
     adh_plot(session, input, output)
+    
+    create_meta_table(session, input, output)
     
     removeModal()
     cat(file = stderr(), "prepare data clicked...end", "\n\n\n")
@@ -130,24 +133,50 @@ shinyServer(function(session, input, output) {
     cat(file = stderr(), "saving excel clicked...", "\n")
     
     bodyStyle <- createStyle(halign = "center", textDecoration = "bold", wrapText = TRUE)
+    dataStyle <- createStyle(halign = "center")
     
     wb <- openxlsx::loadWorkbook(protocol_filename)
     
     filename <- str_c(protocol_path, input$excel_filename)
     
     nextsheet <- 2
-    addWorksheet(wb, "Table2 Peptides")
+    
+    addWorksheet(wb, "Table2 Raw PSM")
+    writeData(wb, sheet = nextsheet, df_psm)
+    addStyle(wb, sheet = nextsheet, rows = 1, cols = 1:ncol(df_psm), style = bodyStyle)
+    setColWidths(wb, sheet = nextsheet, cols = 1:5, widths = 20)
+    
+    nextsheet <- nextsheet + 1
+    addWorksheet(wb, "Table3 Peptides")
     writeData(wb, sheet = nextsheet, df_peptide)
     addStyle(wb, sheet = nextsheet, rows = 1, cols = 1:ncol(df_peptide), style = bodyStyle)
-    setColWidths(wb, sheet = nextsheet, cols = 1:5, widths = 20)
+    if (ptm) {center_cols <- c(1,3,4,6,7,8,9,10,11)} else {center_cols <- c(1,3,4,6,7)}
+    for (center_col in center_cols){
+      addStyle(wb, sheet = nextsheet, rows = 2:nrow(df_peptide), cols=center_col, style = dataStyle)
+    }
+    setColWidths(wb, sheet = nextsheet, cols = c(1,3,4), widths = 20)
+    setColWidths(wb, sheet = nextsheet, cols = c(2,5), widths = 30)
     
     #if df_protein exists add worksheet
     if(exists("df_protein")) {
       nextsheet <- nextsheet + 1
-      addWorksheet(wb, "Table3 Proteins")
+      addWorksheet(wb, "Table4 Proteins")
       writeData(wb, sheet = nextsheet, df_protein)
       addStyle(wb, sheet = nextsheet, rows = 1, cols = 1:ncol(df_protein), style = bodyStyle)
       setColWidths(wb, sheet = nextsheet, cols = 1:5, widths = 20)
+    }
+    
+    if(exists("df_peptide_ptm")) {
+      nextsheet <- nextsheet + 1
+      addWorksheet(wb, "Table4 Phos Peptides")
+      writeData(wb, sheet = nextsheet, df_peptide_ptm)
+      addStyle(wb, sheet = nextsheet, rows = 1, cols = 1:ncol(df_peptide_ptm), style = bodyStyle)
+      setColWidths(wb, sheet = nextsheet, cols = c(1,3,4), widths = 20)
+      setColWidths(wb, sheet = nextsheet, cols = c(2,5), widths = 30)
+      if (ptm) {center_cols <- c(1,3,4,6,7,8,9,10,11)} else {center_cols <- c(1,3,4,6,7)}
+      for (center_col in center_cols){
+        addStyle(wb, sheet = nextsheet, rows = 2:nrow(df_peptide), cols=center_col, style = dataStyle)
+      }
     }
     
     renameWorksheet(wb, 1, "Table1 SampleSheet")

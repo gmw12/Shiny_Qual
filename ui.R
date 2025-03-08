@@ -162,10 +162,28 @@ body <- dashboardBody(
                                           plotOutput("protein_plot", width = "40vw", height = "60vh")
                                         )
                                  ))
+                        ),
+                        
+                        
+                        tabPanel("Meta Data",
+                                 fluidRow(         
+                                   column(width =12, offset =0,
+                                          hr(),
+                                          tags$head(tags$style("#meta_table{color: blue; font-size: 12px;}")),
+                                          DT::dataTableOutput("meta_table", width ='100%')
+                                   )
+                                 )
                         )
+                        
+                        
+                        
+                        
+                        
+                        
+                        
 
-                       )
-            )
+              )
+          )
       )
     )
     )
