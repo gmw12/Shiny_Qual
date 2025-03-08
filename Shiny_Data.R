@@ -11,19 +11,25 @@ precursor_prepare <- function(df_psm){
     ptm <- FALSE
   }
   
+  ptm <<- ptm
+  
   #select columns and clean
   if(ptm){
     df_psm <- precursor_to_precursor_ptm_bg(df_psm)
+    df_psm <<- df_psm
+    df_peptide <- rollup_sum(df_psm, "peptide")
+    df_peptide <<- df_peptide
+    df_peptide_ptm <- df_peptide[grep("Phospho", df_peptide$Sequence),]
+    df_peptide_ptm <- df_peptide_ptm[df_peptide_ptm$Local2 =="Y",]
+    df_peptide_ptm <<- df_peptide_ptm
   }else{
     df_psm <- precursor_to_precursor_bg(df_psm)
+    df_psm <<- df_psm
     df_peptide <- rollup_sum(df_psm, "peptide")
+    df_peptide <<- df_peptide
     df_protein <- rollup_sum(df_peptide, "protein")
+    df_protein <<- df_protein
   }
-  
-  ptm <<- ptm
-  df_psm <<- df_psm
-  df_peptide <<- df_peptide
-  df_protein <<- df_protein
   
   cat(file = stderr(), "Function precursor_prepare...end", "\n")
 }
@@ -74,26 +80,153 @@ precursor_to_precursor_bg <- function(df_psm){
 #--------------------------------------------------------------------------------
 rollup_sum <- function(df, rollup_type){
   cat(file = stderr(), "function rollup_sum...", "\n")
-
   
-  if (rollup_type == "peptide"){
+  if (rollup_type == "peptide" & ptm == FALSE){
     cat(file = stderr(), "function rollup_type = peptide", "\n")
     df_peptide <- df |> dplyr::select("Accession", "Description", "Name", "Genes", "Sequence", "PeptidePosition", contains("TotalQuantity"))
     df_peptide <- tibble::add_column(df_peptide, "Precursors"=1, .after="PeptidePosition")
     df_peptide <- df_peptide |> dplyr::group_by(Accession, Description, Name, Genes, Sequence, PeptidePosition) |> dplyr::summarise_all(list(sum))
     df_peptide <- data.frame(dplyr::ungroup(df_peptide))
+    
+    df_peptide$sum <- rowSums(df_peptide[,(ncol(df_peptide)-sample_number+1):ncol(df_peptide)], na.rm = TRUE)
+    df_peptide <- df_peptide[order(df_peptide$sum, decreasing = TRUE),]
+    df_peptide <- df_peptide |> dplyr::select(-sum)
+    
     cat(file = stderr(), "function rollup_sum...end", "\n\n")
     return(df_peptide)
+    
+  }else if (rollup_type == "peptide" & ptm == TRUE){
+    cat(file = stderr(), "function rollup_type = peptide_ptm", "\n")
+    df_peptide <- df |> dplyr::select("Accession", "Description", "Name", "Genes", "Sequence", "PeptidePosition", "PTM_Loc", "Protein_PTM_Loc",  contains("TotalQuantity"))
+    df_peptide <- tibble::add_column(df_peptide, "Precursors"=1, .after="PeptidePosition")
+    df_peptide <- df_peptide |> dplyr::group_by(Accession, Description, Name, Genes, Sequence, PeptidePosition, PTM_Loc, Protein_PTM_Loc) |> dplyr::summarise_all(list(sum))
+    df_peptide <- data.frame(dplyr::ungroup(df_peptide))
+    df_local <- rollup_local(df)
+    #sort df_peptide by sequence
+    df_peptide <- df_peptide[order(df_peptide$Sequence),]
+    df_local <- df_local[order(df_local$Sequence),]
+    #drop sequence column from df_local
+    df_local <- df_local |> dplyr::select(-Sequence)
+    df_peptide_info <- df_peptide |> dplyr::select("Accession", "Description", "Name", "Genes", "Sequence", "PeptidePosition", "Precursors", "PTM_Loc", "Protein_PTM_Loc")
+    df_peptide_data <- df_peptide |> dplyr::select(contains("TotalQuantity"))
+    df_peptide <- cbind(df_peptide_info, df_local, df_peptide_data)
+    
+    df_peptide$sum <- rowSums(df_peptide[,(ncol(df_peptide)-sample_number+1):ncol(df_peptide)], na.rm = TRUE)
+    df_peptide <- df_peptide[order(df_peptide$sum, decreasing = TRUE),]
+    df_peptide <- df_peptide |> dplyr::select(-sum)
+    
+    cat(file = stderr(), "function rollup_sum...end", "\n\n")
+    return(df_peptide)
+    
   }else if (rollup_type == "protein"){
     cat(file = stderr(), "function rollup_type = protein", "\n")
     df_protein <- df |> dplyr::select("Accession", "Description", "Name", "Genes", contains("TotalQuantity"))
     df_protein <- tibble::add_column(df_protein, "Peptides"=1, .after="Genes")
     df_protein <- df_protein |> dplyr::group_by(Accession, Description, Name, Genes) |> dplyr::summarise_all(list(sum))
     df_protein <- data.frame(dplyr::ungroup(df_protein))
+    
+    df_protein$sum <- rowSums(df_protein[,(ncol(df_protein)-sample_number+1):ncol(df_protein)], na.rm = TRUE)
+    df_protein <- df_protein[order(df_protein$sum, decreasing = TRUE),]
+    df_protein <- df_protein |> dplyr::select(-sum)
+    
     cat(file = stderr(), "function rollup_sum...end", "\n\n")
     return(df_protein)
   }
 }
+
+
+#------------------------------------------------------------
+rollup_local <- function(localized_data) {
+  cat(file = stderr(), "Function rollup_local...", "\n")
+
+  str_to_numlist <- function(str_in) {
+    num_out <- strsplit(str_in, ",") |> unlist() |> as.numeric()
+    return(num_out)
+  }
+  
+  require(foreach)
+  require(doParallel)
+  cores <- detectCores()
+  cl <- makeCluster(cores - 2)
+  registerDoParallel(cl)
+  
+  local_unique <- data.frame(unique(localized_data$Sequence))
+  local_unique$Local <- ""
+  local_unique$Local2 <- ""
+  colnames(local_unique) <- c("Sequence", "Local", "Local2")
+  
+  #for (i in (1:nrow(local_unique))) {
+  parallel_result <- foreach(i = 1:nrow(local_unique), .combine = rbind) %dopar% { 
+    if(grepl("Phospho", local_unique$Sequence[i])) {
+      
+      test_df <- localized_data[localized_data$Sequence == local_unique$Sequence[i],]
+      
+      if(nrow(test_df) > 1) {
+        first_value <- TRUE
+        for (r in (1:nrow(test_df))) {
+          if (first_value) { 
+            temp1 <- str_to_numlist(test_df$Local[r])
+            if (!is.na(temp1[[1]])) {
+              first_value <- FALSE
+            }
+          }else {
+            temp2 <- str_to_numlist(test_df$Local[r])
+            if (!is.na(temp2[[1]])) {
+              temp1 <- pmax(temp1, temp2)
+            }
+          }
+        }
+      }else {
+        temp1 <- str_to_numlist(test_df$Local[1])
+      }
+      
+      if (max(temp1) >= 0.75) {
+        if (min(temp1) >= 0.75) {
+          local2 <- "Y"
+        } else {
+          local2 <- "P"
+        }
+      }else {
+        local2 <- "N"
+      }
+      
+      #local_unique$Local[i] <- list(temp1) 
+      #local_unique$Local2[i] <- local2
+      
+    }else {
+      temp1 <- ""
+      local2 <- ""
+    }
+    
+    #local_unique$Local[i] <- list(temp1) 
+    #local_unique$Local2[i] <- local2
+    list(temp1, local2)
+  }
+  
+  stopCluster(cl) 
+  
+  parallel_result <- data.frame(parallel_result)
+  row.names(parallel_result) <- NULL
+  parallel_result <- cbind(local_unique$Sequence, parallel_result)
+  colnames(parallel_result) <- c("Sequence", "Local", "Local2")
+  
+  numlist_to_string <- function(x) {
+    return(toString(paste(unlist(x$Local) |> as.character() |> paste(collapse = ","))))
+  }
+  
+  numlist_to_string2 <- function(x) {
+    return(toString(paste(unlist(x$Local2) |> as.character() |> paste(collapse = ","))))
+  }
+  
+  parallel_result$Local <- apply(parallel_result, 1, numlist_to_string)
+  parallel_result$Local2 <- apply(parallel_result, 1, numlist_to_string2)
+  
+  cat(file = stderr(), "Function rollup_local...end", "\n")
+  return(parallel_result)
+}
+
+#------------------------------------------------------------
+
 
 #---------------------------------------------------------------------
 adh_plot <- function(session, input, output){
@@ -319,37 +452,42 @@ filter_peptide_table <- function(session, input, output){
 
 #---------------------------------------------------------------------
 #----------------------------------------------------------------------------------------
-precursor_to_precursor_ptm_bg <- function(params){
+precursor_to_precursor_ptm_bg <- function(df){
   cat(file = stderr(), "Function precursor_to_precursor_ptm_bg", "\n")
-  source("Shiny_Rollup.R")
-  source("Shiny_Data.R")
   
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), params$database_path)
-  df <- RSQLite::dbReadTable(conn, "precursor_raw")
-  
-  df_phos_prob <- df |> dplyr::select(contains('PTMProbabilities..Phospho')) 
+  df_phos_prob <- df |> dplyr::select(contains('PTMProbabilities')) 
+  df_phos_prob <- df_phos_prob |> dplyr::select(contains('Phospho')) 
   
   df_colnames <- c("Accession", "Description", "Name", "Genes", "Organisms", "Sequence", "PrecursorId", "PeptidePosition", "ProteinPTMLocations")  
   n_col <- length(df_colnames)
   
-  df <- df |> dplyr::select(contains('ProteinAccessions'), contains('ProteinDescriptions'), contains('ProteinNames'), contains('Genes'), contains('Organisms'),
-                            contains('ModifiedSequence'), contains('PrecursorId'), contains('PeptidePosition'),contains('ProteinPTMLocations'),
-                            contains("TotalQuantity"))
+  df_info <- df |> dplyr::select(contains('ProteinAccessions'), contains('ProteinDescriptions'), contains('ProteinNames'), contains('Genes'), contains('Organisms'),
+                            contains('ModifiedSequence'), contains('PrecursorId'), contains('PeptidePosition'),contains('ProteinPTMLocations'))
   
-  if (ncol(df) != (n_col + params$sample_number))
-  {
-    sample_error <- TRUE
-  }else{
-    sample_error <- FALSE
-    cat(file = stderr(), "Number of columns extracted is not as expected", "\n")
+  df_data <- df |> dplyr::select(contains("TotalQuantity"))
+  
+  data_colnames <- colnames(df_data)
+  i=1
+  for (name in data_colnames){
+    first_space <- unlist(str_locate(name, " "))[1]
+    name <- substr(name, first_space+1, nchar(name))
+    positions <- unlist(str_locate_all(name, "_"))[2]
+    new_name <- substr(name, 1, positions-1)
+    data_colnames[i] <- str_c(new_name, "_TotalQuantity")
+    i <- i +1
   }
   
-  colnames(df)[1:n_col] <- df_colnames  
+  colnames(df_data) <- data_colnames
   
-  # set "Filtered" in TotalQuantity to NA
-  df[df ==  "Filtered"] <- NA
-  df[df ==  0] <- NA
-  df[(n_col + 1):ncol(df)] <- as.data.frame(lapply(df[(n_col + 1):ncol(df)], as.numeric))
+  df_data[df_data ==  "Filtered"] <- 0
+  df_data[is.na(df_data)] <- 0  
+  df_data <- as.data.frame(lapply(df_data, as.numeric))
+  
+  sample_number <- ncol(df_data) 
+  
+  colnames(df_info) <- df_colnames  
+  
+  df <- cbind(df_info, df_data)
   
   df$Description <- stringr::str_c(df$Description, ", org=", df$Organisms) 
   df$Organisms <- NULL
@@ -371,12 +509,9 @@ precursor_to_precursor_ptm_bg <- function(params){
   df_other <- tibble::add_column(df_other, "Local" = "", .after="PrecursorId")
   
   df <- rbind(df_phos, df_other)
-  
-  RSQLite::dbWriteTable(conn, "precursor_start", df, overwrite = TRUE)
-  RSQLite::dbDisconnect(conn)
-  
+
   cat(file = stderr(), "precursor_to_precursor_ptm_bg complete", "\n\n")
-  return(sample_error)
+  return(df)
 }
 
 #----------------------------------------------------------------------------------------

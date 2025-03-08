@@ -65,7 +65,7 @@ shinyServer(function(session, input, output) {
       
       create_data_table(session, input, output, "peptide")
       
-      create_data_table(session, input, output, "protein")
+      if (ptm==FALSE) {create_data_table(session, input, output, "protein")}
       
       intensity_plot(session, input, output)
       
@@ -86,7 +86,7 @@ shinyServer(function(session, input, output) {
     
     create_data_table(session, input, output, "peptide")
 
-    create_data_table(session, input, output, "protein")
+    if (ptm == FALSE) {create_data_table(session, input, output, "protein")}
     
     intensity_plot(session, input, output)
     

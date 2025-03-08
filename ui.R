@@ -73,7 +73,7 @@ body <- dashboardBody(
                                           textInput("peptide_data_sequence", label = "Sequence", value = "", width = 300)
                                    ),
                                    column(width = 2,
-                                          actionButton("peptide_data_table_apply", label = "Filter Table", width = 300,
+                                          actionButton("peptide_data_table_apply", label = "Filter Table", width = 150,
                                                        style = "color: #fff; background-color: #337ab7; border-color: #2e6da4")
                                    )
                                  ),
@@ -102,7 +102,7 @@ body <- dashboardBody(
                                           textInput("protein_data_gene", label = "Genes", value = "", width = 300)
                                    ),
                                    column(width = 2,
-                                          actionButton("protein_data_table_apply", label = "Filter Table", width = 300,
+                                          actionButton("protein_data_table_apply", label = "Filter Table", width = 150,
                                                        style = "color: #fff; background-color: #337ab7; border-color: #2e6da4")
                                    )
                                  ),
@@ -133,7 +133,7 @@ body <- dashboardBody(
                                  )
                         ),
 
-                        tabPanel("Plot: Protein",
+                        tabPanel("Plot: Custom",
                            fluidRow(
                              column(width = 2,
                                     textInput("protein_accession", label = "Accession", value = "", width = 300)
@@ -151,7 +151,7 @@ body <- dashboardBody(
                                     textInput("peptide_sequence", label = "Sequence", value = "", width = 300)
                                     ),
                              column(width = 2,
-                                    actionButton("protein_plot_apply", label = "Show Plot", width = 300,
+                                    actionButton("protein_plot_apply", label = "Show Plot", width = 150,
                                                  style = "color: #fff; background-color: #337ab7; border-color: #2e6da4")
                                     )
                                 ),
