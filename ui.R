@@ -133,6 +133,15 @@ body <- dashboardBody(
                                  )
                         ),
 
+                        tabPanel("Plot: Casein",
+                                 column(width =12, offset =0,
+                                        div(
+                                          style = "position:relative",
+                                          plotOutput("casein_plot", width = "60vw", height = "80vh")
+                                        )
+                                 )
+                        ),
+                        
                         tabPanel("Plot: Custom",
                            fluidRow(
                              column(width = 2,

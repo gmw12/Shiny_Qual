@@ -68,8 +68,10 @@ precursor_to_precursor_bg <- function(df_psm){
   
   df_data[df_data ==  "Filtered"] <- 0
   df_data[is.na(df_data)] <- 0  
+  df_data[df_data == "NaN"] <- 0
   df_data <- as.data.frame(lapply(df_data, as.numeric))
-  
+  df_data <- round(df_data, digits = 0)
+
   sample_number <- ncol(df_data) 
   
   colnames(df_info) <- df_colnames  
@@ -239,37 +241,42 @@ rollup_local <- function(localized_data) {
 
 
 #---------------------------------------------------------------------
-adh_plot <- function(session, input, output){
-  cat(file = stderr(), "Function adh_plot...", "\n")
+qc_plot <- function(session, input, output, type){
+  cat(file = stderr(), "Function qc_plot...", "\n")
   
-  df_adh <- df_peptide[grep("P00330", df_peptide$Accession),]
+  if (type == "adh") { df <- df_peptide[grep("P00330", df_peptide$Accession),] }
+  
+  if (type == "casein") { df <- df_peptide[grep("P02662|P02663", df_peptide$Accession),] }
   
   #using dplyr filter only columns that contain "PEP.Quantity" in the name
-  df_adh <- df_adh |> dplyr::select(contains("TotalQuantity"))
-  adh_colnames <- colnames(df_adh)
+  df <- df |> dplyr::select(contains("TotalQuantity"))
+  qc_colnames <- colnames(df)
   
   i=1
-  for (name in adh_colnames){
+  for (name in qc_colnames){
     positions <- str_locate_all(name, "_")
     new_name <- substr(name, 1, (unlist(positions)[2]-1))
-    adh_colnames[i] <- new_name
+    qc_colnames[i] <- new_name
     i <- i +1
   }
   
-  df <- data.frame(adh_colnames, colSums(df_adh, na.rm = TRUE))
-  colnames(df) <- c("Sample", "Sum")
+  df_plot <- data.frame(qc_colnames, colSums(df, na.rm = TRUE))
+  colnames(df_plot) <- c("Sample", "Sum")
   
-  df <- df[!grepl("ADH", df$Sample),]
+  df_plot <- df_plot[!grepl("ADH", df_plot$Sample),] 
   
-  adh_cv <- 100 * round(sd(df$Sum)/mean(df$Sum), digits = 3)
-  df_meta$adh_cv <<- round(adh_cv, digits = 3)
-  adh_title <- str_c("ADH, CV = ", adh_cv, "%")
+  qc_cv <- 100 * round(sd(df_plot$Sum)/mean(df_plot$Sum), digits = 3)
+  df_meta$adh_cv <<- round(qc_cv, digits = 3)
+  
+  if (type == "adh") {qc_title <- str_c("ADH, CV = ", qc_cv, "%") }
+  
+  if (type == "casein") {qc_title <- str_c("Casein, CV = ", qc_cv, "%") }
   
   #using ggplot greate barplot of adh_sum, then show the plot
-  create_adh_plot <- reactive({
-    ggplot2::ggplot(data = df, aes(x = Sample, y = Sum, fill = Sample)) +
+  create_qc_plot <- reactive({
+    ggplot2::ggplot(data = df_plot, aes(x = Sample, y = Sum, fill = Sample)) +
       ggplot2::geom_bar(stat = "identity")+ 
-      ggplot2::labs(title = adh_title, x = "Sample", y = "Total Intensity") +
+      ggplot2::labs(title = qc_title, x = "Sample", y = "Total Intensity") +
       ggplot2::theme(legend.position="none") +
       ggplot2::theme(plot.title = element_text(hjust = 0.5, size = 16), 
                      axis.title = element_text(size = 12, color = "black"),
@@ -278,13 +285,19 @@ adh_plot <- function(session, input, output){
       ) 
   })
   
-  output$adh_plot <- renderPlot({
-    req(create_adh_plot())
-    create_adh_plot()
-  })
+  if (type == "adh") {
+    output$adh_plot <- renderPlot({
+      req(create_qc_plot())
+      create_qc_plot()}
+    )}
+
+  if (type == "casein") {
+    output$casein_plot <- renderPlot({
+      req(create_qc_plot())
+      create_qc_plot()}
+    )}
   
-  
-  cat(file = stderr(), "Function adh_plot...end", "\n\n")
+  cat(file = stderr(), "Function qc_plot...end", "\n\n")
 }
 
 #---------------------------------------------------------------------
@@ -493,7 +506,9 @@ precursor_to_precursor_ptm_bg <- function(df){
   
   df_data[df_data ==  "Filtered"] <- 0
   df_data[is.na(df_data)] <- 0  
+  df_data[df_data == "NaN"] <- 0
   df_data <- as.data.frame(lapply(df_data, as.numeric))
+  df_data <- round(df_data, digits = 0)
   
   sample_number <- ncol(df_data) 
   sample_number <<- sample_number
