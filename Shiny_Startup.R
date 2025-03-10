@@ -19,7 +19,7 @@ set_user <- function() {
       volumes <<- c(dd = '/home/dpmsr/mnt/h_black2', h1 = '/home/dpmsr/mnt/h_black1', h2 = '/home/dpmsr/mnt/h_black2', dc = 'home/dpmsr/mnt/RawData', wd = '.', Home = fs::path_home(), getVolumes()())
       site_user <<- "dpmsr"
     }else if (Sys.info()["nodename"] == "shiny-titan") {
-      volumes <<- c(dd = '/mnt/RawData', wd = '.', Home = fs::path_home(), getVolumes()())
+      volumes <<- c(h2 = '/mnt/h_black2', h1 = '/mnt/h_black1', dc = '/mnt/RawData', wd = '.', Home = fs::path_home(), getVolumes()())
       site_user <<- "dpmsr"
     }else if (Sys.info()["nodename"] == "Gregorys-MBP.wired.duke.local" |Sys.info()["nodename"] == "gregorys-mbp.lan" | Sys.info()["nodename"] == "mac.lan" | Sys.info()["nodename"] == "Gregorys-MacBook-Pro.local" ) {
       volumes <<- c(dd = '/Users/gregwaitt/R/ShinyR_Biocrates', dd2 = '/Users/gregwaitt/R', dc = '/mnt/RawData', wd = '.', Home = fs::path_home(), getVolumes()())
