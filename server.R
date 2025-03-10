@@ -43,25 +43,25 @@ shinyServer(function(session, input, output) {
   
   #------------------------------------------------------------------------------------------------------  
   #Load data file
-  observeEvent(input$sfb_psm_file, {
+  observeEvent(input$sfb_precursor_file, {
     
-    cat(file = stderr(), "sfb_psm_file button clicked...", "\n")
+    cat(file = stderr(), "sfb_precursor_file button clicked...", "\n")
     
-    if (is.list(input$sfb_psm_file)) {
-      showModal(modalDialog("Loading psm data...", footer = NULL))
+    if (is.list(input$sfb_precursor_file)) {
+      showModal(modalDialog("Loading precursor data...", footer = NULL))
       
-      psm_sfb <- parseFilePaths(volumes, input$sfb_psm_file)
-      psm_path <- str_extract(psm_sfb$datapath, "^/.*/")
-      psm_filename <- psm_sfb$datapath
+      precursor_sfb <- parseFilePaths(volumes, input$sfb_precursor_file)
+      precursor_path <- str_extract(precursor_sfb$datapath, "^/.*/")
+      precursor_filename <- precursor_sfb$datapath
       
-      psm_path <<- psm_path
-      psm_filename <<- psm_filename
+      precursor_path <<- precursor_path
+      precursor_filename <<- precursor_filename
       
-      df_psm <- data.table::fread(file = psm_filename, header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+      df_precursor <- data.table::fread(file = precursor_filename, header = TRUE, stringsAsFactors = FALSE, sep = "\t")
       
-      output$psm_file_name <- renderText({ stringr::str_c(basename(psm_filename)) })
+      output$precursor_file_name <- renderText({ stringr::str_c(basename(precursor_filename)) })
       
-      precursor_prepare(df_psm)
+      precursor_prepare(df_precursor)
       
       create_data_table(session, input, output, "peptide")
       
@@ -78,7 +78,7 @@ shinyServer(function(session, input, output) {
       removeModal()
     }
     
-    cat(file = stderr(), "sfb_psm_file button clicked...end", "\n\n\n")
+    cat(file = stderr(), "sfb_precursor_file button clicked...end", "\n\n\n")
   }) 
 
 
@@ -145,9 +145,9 @@ shinyServer(function(session, input, output) {
     
     nextsheet <- 2
     
-    # addWorksheet(wb, "Table2 Raw PSM")
-    # writeData(wb, sheet = nextsheet, df_psm)
-    # addStyle(wb, sheet = nextsheet, rows = 1, cols = 1:ncol(df_psm), style = bodyStyle)
+    # addWorksheet(wb, "Table2 Raw precursor")
+    # writeData(wb, sheet = nextsheet, df_precursor)
+    # addStyle(wb, sheet = nextsheet, rows = 1, cols = 1:ncol(df_precursor), style = bodyStyle)
     # setColWidths(wb, sheet = nextsheet, cols = 1:5, widths = 20)
     
     #nextsheet <- nextsheet + 1

@@ -51,7 +51,7 @@ set_file_choosers <- function(session, input, output, volumes) {
   cat(file = stderr(), stringr::str_c("Volumes ---> ", volumes), "\n")
   
   shinyFileChoose(input, 'sfb_protocol_file', session = session, roots = volumes, filetypes = c('', 'xlsx'))
-  shinyFileChoose(input, 'sfb_psm_file', session = session, roots = volumes, filetypes = c('', 'tsv', 'txt'))
+  shinyFileChoose(input, 'sfb_precursor_file', session = session, roots = volumes, filetypes = c('', 'tsv', 'txt'))
   
   cat(file = stderr(), "Function - set_file_choosers...end", "\n\n")
 }
@@ -63,7 +63,7 @@ set_file_choosers_data <- function(session, input, output, volumes) {
   cat(file = stderr(), "Function - set_file_choosers_data...", "\n")
   cat(file = stderr(), stringr::str_c("Volumes ---> ", volumes), "\n")
   
-  shinyFileChoose(input, 'sfb_psm_file', session = session, roots = volumes, filetypes = c('', 'tsv', 'txt'))
+  shinyFileChoose(input, 'sfb_precursor_file', session = session, roots = volumes, filetypes = c('', 'tsv', 'txt'))
   
   cat(file = stderr(), "Function - set_file_choosers_data...end", "\n")
 }

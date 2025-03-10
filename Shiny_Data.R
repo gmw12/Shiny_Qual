@@ -2,10 +2,10 @@ cat(file = stderr(), "Shiny_Data.R", "\n")
 
 
 #---------------------------------------------------------------------
-precursor_prepare <- function(df_psm){
+precursor_prepare <- function(df_precursor){
   cat(file = stderr(), "Function precursor_prepare...", "\n")
   
-  if (any(grepl("EG.PTMProbabilities", names(df_psm)))) {
+  if (any(grepl("EG.PTMProbabilities", names(df_precursor)))) {
     ptm <- TRUE
   }else {
     ptm <- FALSE
@@ -13,21 +13,21 @@ precursor_prepare <- function(df_psm){
   
   ptm <<- ptm
   
-  df_meta <<- data.frame("psm" = nrow(df_psm))
+  df_meta <<- data.frame("precursor" = nrow(df_precursor))
   
   #select columns and clean
   if(ptm){
-    df_psm <- precursor_to_precursor_ptm_bg(df_psm)
-    df_psm <<- df_psm
-    df_peptide <- rollup_sum(df_psm, "peptide")
+    df_precursor <- precursor_to_precursor_ptm_bg(df_precursor)
+    df_precursor <<- df_precursor
+    df_peptide <- rollup_sum(df_precursor, "peptide")
     df_peptide <<- df_peptide
     df_peptide_ptm <- df_peptide[grep("Phospho", df_peptide$Sequence),]
     df_peptide_ptm <- df_peptide_ptm[df_peptide_ptm$Local2 =="Y",]
     df_peptide_ptm <<- df_peptide_ptm
   }else{
-    df_psm <- precursor_to_precursor_bg(df_psm)
-    df_psm <<- df_psm
-    df_peptide <- rollup_sum(df_psm, "peptide")
+    df_precursor <- precursor_to_precursor_bg(df_precursor)
+    df_precursor <<- df_precursor
+    df_peptide <- rollup_sum(df_precursor, "peptide")
     df_peptide <<- df_peptide
     df_protein <- rollup_sum(df_peptide, "protein")
     df_protein <<- df_protein
@@ -43,15 +43,15 @@ precursor_prepare <- function(df_psm){
 }
 
 #----------------------------------------------------------------------------------------
-precursor_to_precursor_bg <- function(df_psm){
+precursor_to_precursor_bg <- function(df_precursor){
   cat(file = stderr(), "Function precursor_to_precursor_bg", "\n")
   
   df_colnames <- c("Accession", "Description", "Name", "Genes", "Organisms", "Sequence", "PrecursorId", "PeptidePosition")  
   n_col <- length(df_colnames)
   
-  df_info <- df_psm |> dplyr::select(contains('ProteinAccessions'), contains('ProteinDescriptions'), contains('ProteinNames'), contains('Genes'), contains('Organisms'),
+  df_info <- df_precursor |> dplyr::select(contains('ProteinAccessions'), contains('ProteinDescriptions'), contains('ProteinNames'), contains('Genes'), contains('Organisms'),
                             contains('ModifiedSequence'), contains('PrecursorId'), contains('PeptidePosition'))
-  df_data <- df_psm |> dplyr::select(contains("EG.TotalQuantity"))
+  df_data <- df_precursor |> dplyr::select(contains("EG.TotalQuantity"))
   
   data_colnames <- colnames(df_data)
   i=1
@@ -79,11 +79,11 @@ precursor_to_precursor_bg <- function(df_psm){
   df_info$Description <- stringr::str_c(df_info$Description, ", org=", df_info$Organisms) 
   df_info$Organisms <- NULL
   
-  df_psm <- cbind(df_info, df_data)
+  df_precursor <- cbind(df_info, df_data)
   sample_number <<- sample_number
   
   cat(file = stderr(), "precursor_to_precursor_bg... complete", "\n\n")
-  return(df_psm)
+  return(df_precursor)
 }
 
 
@@ -715,7 +715,7 @@ meta_data<- function(){
   cat(file = stderr(), "Function meta_data...", "\n")
   
   #create empty dataframe called df_meta
-  df_meta <- data.frame("psm" = nrow(df_psm))
+  df_meta <- data.frame("precursor" = nrow(df_precursor))
   df_meta$peptide <- nrow(df_peptide)
   if(exists("df_protein")) {df_meta$protein <- nrow(df_protein)}
   if(exists("df_peptide_ptm")) {df_meta$peptide_ptm <- nrow(df_peptide_ptm)}
