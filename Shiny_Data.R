@@ -437,7 +437,7 @@ filter_protein_table <- function(session, input, output){
   }
   
   if (input$protein_data_description != ""){
-    df <- df[grep(input$protein_data_description, df$PG.Description),]
+    df <- df[grep(input$protein_data_description, df$Description),]
   }
 
   cat(file = stderr(), "Function filter protein table...", "\n\n\n")
