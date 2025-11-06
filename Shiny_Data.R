@@ -46,11 +46,12 @@ precursor_prepare <- function(df_precursor){
 precursor_to_precursor_bg <- function(df_precursor){
   cat(file = stderr(), "Function precursor_to_precursor_bg", "\n")
   
-  df_colnames <- c("Accession", "Description", "Name", "Genes", "Organisms", "Sequence", "PrecursorId", "PeptidePosition")  
+  df_colnames <- c("Accession", "Description", "Name", "Genes", "Organisms", "Sequence", "Unique", "PrecursorId", "PeptidePosition")  
   n_col <- length(df_colnames)
   
   df_info <- df_precursor |> dplyr::select(contains('ProteinAccessions'), contains('ProteinDescriptions'), contains('ProteinNames'), contains('Genes'), contains('Organisms'),
-                            contains('ModifiedSequence'), contains('PrecursorId'), contains('PeptidePosition'))
+                            contains('ModifiedSequence'), contains('ProteinGroupSpecific'), contains('PrecursorId'), contains('PeptidePosition'))
+  
   df_data <- df_precursor |> dplyr::select(contains("EG.TotalQuantity"))
   
   data_colnames <- colnames(df_data)
@@ -81,6 +82,9 @@ precursor_to_precursor_bg <- function(df_precursor){
   
   df_precursor <- cbind(df_info, df_data)
   sample_number <<- sample_number
+  
+  #set df$Unique to strings: True/False
+  df_precursor$Unique <- ifelse(df$Unique == TRUE, "True", "False")
   
   cat(file = stderr(), "precursor_to_precursor_bg... complete", "\n\n")
   return(df_precursor)

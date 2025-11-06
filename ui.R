@@ -29,7 +29,7 @@ body <- dashboardBody(
                            br(),
                            tags$h4("2. Load data..."),
                            fluidRow(align = "center", 
-                                    shinyFilesButton('sfb_precursor_file', label = 'Load Precursor File', title = 'Please select tsv psm file', multiple = FALSE,
+                                    shinyFilesButton('sfb_precursor_file', label = 'Load Precursor File', title = 'Please select tsv precursor file', multiple = FALSE,
                                       style = "color: #fff; background-color: #337ab7; border-color: #2e6da4; display:center")),
                            span(textOutput("precursor_file_name"), style = "color:blue; font-size:9px"), 
                            br(),
