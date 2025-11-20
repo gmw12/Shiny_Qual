@@ -12,6 +12,7 @@ precursor_prepare <- function(df_precursor){
   }
   
   ptm <<- ptm
+  test_df_precursor <<- df_precursor  #  df_precursor <- test_df_precursor
   
   df_meta <<- data.frame("precursor" = nrow(df_precursor))
   
@@ -55,6 +56,7 @@ precursor_to_precursor_bg <- function(df_precursor){
   df_data <- df_precursor |> dplyr::select(contains("EG.TotalQuantity"))
   
   data_colnames <- colnames(df_data)
+  
   i=1
   for (name in data_colnames){
     first_space <- unlist(str_locate(name, " "))[1]
@@ -66,6 +68,7 @@ precursor_to_precursor_bg <- function(df_precursor){
   }
   
   colnames(df_data) <- data_colnames
+  colnames(df_info) <- df_colnames
   
   df_data[df_data ==  "Filtered"] <- 0
   df_data[is.na(df_data)] <- 0  
@@ -84,7 +87,7 @@ precursor_to_precursor_bg <- function(df_precursor){
   sample_number <<- sample_number
   
   #set df$Unique to strings: True/False
-  df_precursor$Unique <- ifelse(df$Unique == TRUE, "True", "False")
+  df_precursor$Unique <- ifelse(df_precursor$Unique == TRUE, "True", "False")
   
   cat(file = stderr(), "precursor_to_precursor_bg... complete", "\n\n")
   return(df_precursor)
